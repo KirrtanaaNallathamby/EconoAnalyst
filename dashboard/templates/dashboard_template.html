@@ -1,0 +1,597 @@
+// dashboard/templates/dashboard_template.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoResearch Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 30%),
+                radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 32%),
+                radial-gradient(circle at bottom, rgba(20, 184, 166, 0.12), transparent 34%),
+                #020617;
+            color: #e5e7eb;
+        }
+
+        .page {
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        .shell {
+            width: min(1600px, 100%);
+            margin: 0 auto;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 34px;
+            padding: 42px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background:
+                linear-gradient(135deg, rgba(15, 118, 110, 0.92), rgba(15, 23, 42, 0.98)),
+                radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.18), transparent 26%);
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+        }
+
+        .hero-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 15px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #d1fae5;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .generated {
+            color: #ccfbf1;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .hero h1 {
+            margin: 0;
+            max-width: 980px;
+            font-size: clamp(42px, 5vw, 76px);
+            letter-spacing: -2.8px;
+            line-height: 0.95;
+            color: #ffffff;
+        }
+
+        .hero p {
+            max-width: 960px;
+            margin: 24px 0 0;
+            font-size: 18px;
+            color: #ccfbf1;
+            line-height: 1.75;
+        }
+
+        .hero-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .hero-metric {
+            padding: 18px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .hero-metric span {
+            display: block;
+            color: #a7f3d0;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .hero-metric strong {
+            display: block;
+            color: white;
+            font-size: 24px;
+            letter-spacing: -0.5px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin: 24px 0;
+        }
+
+        .kpi {
+            position: relative;
+            overflow: hidden;
+            padding: 24px;
+            border-radius: 28px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.035));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
+        }
+
+        .kpi::after {
+            content: "";
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            right: -50px;
+            top: -50px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.12);
+        }
+
+        .kpi span {
+            display: block;
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 14px;
+        }
+
+        .kpi strong {
+            display: block;
+            color: #ffffff;
+            font-size: 36px;
+            line-height: 1;
+            letter-spacing: -1.1px;
+        }
+
+        .kpi small {
+            display: block;
+            margin-top: 13px;
+            color: #6ee7b7;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 34px 0 16px;
+        }
+
+        .section-title h2 {
+            margin: 0;
+            color: white;
+            font-size: 26px;
+            letter-spacing: -0.6px;
+        }
+
+        .section-title p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .chart-card {
+            overflow: hidden;
+            min-height: 460px;
+            padding: 18px;
+            border-radius: 30px;
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(18px);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .panel {
+            padding: 28px;
+            border-radius: 30px;
+            background: rgba(15, 23, 42, 0.76);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.26);
+            backdrop-filter: blur(18px);
+        }
+
+        .panel h2 {
+            margin: 0 0 20px;
+            color: #ffffff;
+            font-size: 25px;
+            letter-spacing: -0.5px;
+        }
+
+        .panel p {
+            color: #cbd5e1;
+            line-height: 1.8;
+            margin: 0;
+        }
+
+        .findings {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .findings li {
+            padding: 17px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            line-height: 1.7;
+        }
+
+        .findings li:last-child {
+            border-bottom: none;
+        }
+
+        .findings strong {
+            color: #a7f3d0;
+        }
+
+        .dataset-title {
+            padding: 18px;
+            margin-bottom: 18px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #d1fae5;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .meta {
+            padding: 18px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .meta span {
+            display: block;
+            color: #94a3b8;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .meta strong {
+            display: block;
+            color: #ffffff;
+            font-size: 20px;
+            word-break: break-word;
+        }
+
+        .method-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .steps {
+            display: grid;
+            gap: 12px;
+        }
+
+        .step {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            flex: 0 0 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.16);
+            color: #a7f3d0;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .step div {
+            color: #cbd5e1;
+            line-height: 1.65;
+            font-size: 15px;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            color: #64748b;
+            font-size: 14px;
+            padding: 34px 4px 10px;
+        }
+
+        @media (max-width: 1200px) {
+            .kpi-grid,
+            .charts-grid,
+            .hero-metrics,
+            .info-grid,
+            .method-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                min-height: auto;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .page {
+                padding: 16px;
+            }
+
+            .hero {
+                padding: 28px;
+                border-radius: 26px;
+            }
+
+            .hero h1 {
+                font-size: 42px;
+                letter-spacing: -1.8px;
+            }
+
+            .kpi strong {
+                font-size: 31px;
+            }
+
+            .meta-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .panel,
+            .chart-card {
+                border-radius: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <div class="shell">
+
+            <section class="hero">
+                <div class="hero-top">
+                    <div class="badge">🌱 EcoResearch Bot · Official Data Dashboard</div>
+                    <div class="generated">Generated: $generated_at</div>
+                </div>
+
+                <h1>Malaysia Labour Market Dashboard</h1>
+
+                <p>$task</p>
+
+                <div class="hero-metrics">
+                    <div class="hero-metric">
+                        <span>Latest unemployment rate</span>
+                        <strong>$latest_rate%</strong>
+                    </div>
+
+                    <div class="hero-metric">
+                        <span>Peak unemployment</span>
+                        <strong>$peak_rate%</strong>
+                    </div>
+
+                    <div class="hero-metric">
+                        <span>Lowest unemployment</span>
+                        <strong>$lowest_rate%</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="kpi-grid">
+                <div class="kpi">
+                    <span>Latest Unemployment Rate</span>
+                    <strong>$latest_rate%</strong>
+                    <small>Overall change from earliest record: $change%</small>
+                </div>
+
+                <div class="kpi">
+                    <span>Labour Force</span>
+                    <strong>$latest_labour_force</strong>
+                    <small>Latest available value from selected dataset</small>
+                </div>
+
+                <div class="kpi">
+                    <span>Employed Population</span>
+                    <strong>$latest_employed</strong>
+                    <small>Based on official labour force data</small>
+                </div>
+
+                <div class="kpi">
+                    <span>Unemployed Population</span>
+                    <strong>$latest_unemployed</strong>
+                    <small>Latest available value from selected dataset</small>
+                </div>
+            </section>
+
+            <div class="section-title">
+                <div>
+                    <h2>Trend Visualisation</h2>
+                    <p>Automatically generated from the discovered official dataset.</p>
+                </div>
+            </div>
+
+            <section class="charts-grid">
+                <div class="chart-card">
+                    $unemployment_chart
+                </div>
+
+                <div class="chart-card">
+                    $labour_force_chart
+                </div>
+
+                <div class="chart-card">
+                    $employment_chart
+                </div>
+
+                <div class="chart-card">
+                    $participation_chart
+                </div>
+            </section>
+
+            <section class="info-grid">
+                <div class="panel">
+                    <h2>Key Findings</h2>
+
+                    <ul class="findings">
+                        <li>
+                            Latest unemployment rate is
+                            <strong>$latest_rate%</strong>.
+                        </li>
+
+                        <li>
+                            Unemployment changed from
+                            <strong>$earliest_rate%</strong>
+                            to
+                            <strong>$latest_rate%</strong>
+                            across the selected dataset period.
+                        </li>
+
+                        <li>
+                            Highest unemployment rate recorded was
+                            <strong>$peak_rate%</strong>
+                            during
+                            <strong>$peak_date</strong>.
+                        </li>
+
+                        <li>
+                            Lowest unemployment rate recorded was
+                            <strong>$lowest_rate%</strong>
+                            during
+                            <strong>$lowest_date</strong>.
+                        </li>
+
+                        <li>
+                            Latest labour force participation rate is
+                            <strong>$latest_participation%</strong>.
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="panel">
+                    <h2>Dataset Used</h2>
+
+                    <div class="dataset-title">
+                        $dataset_title
+                    </div>
+
+                    <div class="meta-grid">
+                        <div class="meta">
+                            <span>Dataset ID</span>
+                            <strong>$dataset_id</strong>
+                        </div>
+
+                        <div class="meta">
+                            <span>Rows</span>
+                            <strong>$row_count</strong>
+                        </div>
+
+                        <div class="meta">
+                            <span>Columns</span>
+                            <strong>$column_count</strong>
+                        </div>
+                    </div>
+
+                    <p>
+                        This dataset was discovered from trusted Malaysian data sources and selected
+                        automatically based on the user's research task and Markdown instructions.
+                    </p>
+                </div>
+            </section>
+
+            <section class="method-grid">
+                <div class="panel">
+                    <h2>Simple Interpretation</h2>
+
+                    <p>
+                        This dashboard summarises Malaysia's labour market movement using official
+                        labour force indicators. The unemployment rate trend, labour force size,
+                        employment level, unemployment level, and participation rate are displayed
+                        together so the user can understand both headline changes and supporting
+                        labour market conditions.
+                    </p>
+                </div>
+
+                <div class="panel">
+                    <h2>How EcoResearch Bot Built This</h2>
+
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div>Received the research task from Telegram.</div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div>Read the uploaded Markdown file and extracted trusted source instructions.</div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div>Discovered and downloaded a relevant structured dataset.</div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div>Analysed the dataset and generated this HTML dashboard automatically.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="footer">
+                <div>Generated by EcoResearch Bot</div>
+                <div>Telegram · FastAPI · Dataset Discovery · Plotly Dashboard</div>
+            </footer>
+
+        </div>
+    </main>
+</body>
+</html>

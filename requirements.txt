@@ -1,0 +1,13 @@
+python-telegram-bot==22.7
+python-dotenv
+fastapi
+uvicorn
+python-multipart
+requests
+validators
+beautifulsoup4
+httpx
+lxml
+pandas
+pyarrow
+plotly

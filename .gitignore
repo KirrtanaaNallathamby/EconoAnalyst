@@ -1,0 +1,51 @@
+# Python
+
+**pycache**/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# Environment secrets
+
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Storage outputs
+
+storage/uploaded_markdowns/*
+storage/downloaded_datasets/*
+storage/generated_dashboards/*
+
+!storage/uploaded_markdowns/.gitkeep
+!storage/downloaded_datasets/.gitkeep
+!storage/generated_dashboards/.gitkeep
+
+# Logs
+
+*.log
+
+# Cache
+
+.cache/
+.pytest_cache/
+
+# Jupyter
+
+.ipynb_checkpoints/
+
+# OpenClaw local/auth data - DO NOT PUSH
+
+.openclaw/
