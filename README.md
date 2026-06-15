@@ -83,6 +83,7 @@ The bot should return:
 
 * a short research summary
 * an HTML dashboard file
+* a screenshot preview
 
 IMPORTANT NOTES
 
