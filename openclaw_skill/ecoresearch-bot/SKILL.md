@@ -214,3 +214,4 @@ Expected success response:
 - If dashboard generation fails, report the reason.
 - Keep the task focused on Malaysia unemployment or labour force trend analysis unless the backend is extended for other economic topics.
 - The backend owns dataset discovery, analysis, and dashboard generation.
+- The screenshot quality check only verifies visual readability, not the correctness of the economic analysis.
