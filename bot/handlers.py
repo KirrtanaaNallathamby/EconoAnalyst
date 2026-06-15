@@ -1,8 +1,10 @@
 from pathlib import Path
 from datetime import datetime
 from telegram import Update
+from telegram.constants import ChatAction
 from telegram.ext import ContextTypes
 import os
+import asyncio
 import re
 import requests
 from dotenv import load_dotenv
@@ -108,34 +110,262 @@ def build_student_summary(
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Hi, I’m EcoResearch Bot 🌱📊\n\n"
-        "Send me:\n"
-        "1. Your economics research task\n"
-        "2. A Markdown (.md) instruction file\n\n"
-        "I will find official data, analyse it, and return an interactive dashboard."
-    )
+    message = """Hi, I am EconoAnalyst 📊
+
+I help Economics students understand Malaysia labour market data.
+
+You can ask me questions such as:
+• Why is unemployment rate important?
+• What is labour force participation rate?
+• How can unemployment trend be used in an economics assignment?
+• Compare employment and unemployment.
+
+When you want the full dashboard, type:
+Generate Malaysia labour market dashboard
+"""
+    await update.message.reply_text(message)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "How to use EcoResearch Bot:\n\n"
-        "1. Send your research task as a normal message.\n"
-        "Example: Analyse Malaysia unemployment trend.\n\n"
-        "2. Upload a .md file containing trusted websites and instructions.\n\n"
-        "3. I will return a short summary and an HTML dashboard file."
-    )
+    message = """Hi, I am EconoAnalyst 📊
+
+I help Economics students understand Malaysia labour market data.
+
+You can ask me questions such as:
+• Why is unemployment rate important?
+• What is labour force participation rate?
+• How can unemployment trend be used in an economics assignment?
+• Compare employment and unemployment.
+
+When you want the full dashboard, type:
+Generate Malaysia labour market dashboard
+"""
+    await update.message.reply_text(message)
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
+    user_text = update.message.text.strip()
+    user_id = update.effective_user.id
     context.user_data["latest_task"] = user_text
 
-    await update.message.reply_text(
-        "Task received ✅\n\n"
-        f"📌 Your task:\n{user_text}\n\n"
-        "Now upload your Markdown instruction file (.md)."
-    )
+    lower_text = user_text.lower()
+
+    # Help / menu
+    if lower_text in [
+        "help", "/help",
+        "what can you do", "what can you do?",
+        "what can i ask you", "what can i ask you?",
+        "what can i ask", "what can i ask?",
+        "menu", "start", "/start"
+    ]:
+        await update.message.reply_text(
+            "Hi, I am EconoAnalyst 📊\n\n"
+            "I help Economics students understand Malaysia labour market data.\n\n"
+            "You can ask me questions such as:\n"
+            "• Why is unemployment rate important?\n"
+            "• What is labour force participation rate?\n"
+            "• How can unemployment trend be used in an economics assignment?\n"
+            "• Compare employment and unemployment.\n\n"
+            "When you want the full dashboard, type:\n"
+            "Generate Malaysia labour market dashboard"
+        )
+        return
+
+    # Only generate dashboard when user clearly asks for visual/report output
+    should_generate = any(word in lower_text for word in [
+        "generate", "dashboard", "report", "visualise", "visualize", "chart", "html"
+    ])
+
+    # Normal topic Q&A using OpenRouter free LLM
+    if not should_generate:
+        load_dotenv(dotenv_path=Path.cwd() / ".env")
+
+        openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        openrouter_model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
+
+        if not openrouter_key:
+            await update.message.reply_text(
+                "OpenRouter is not configured yet. Please set OPENROUTER_API_KEY in .env.\n\n"
+                "For dashboard demo, type:\n"
+                "Generate Malaysia labour market dashboard"
+            )
+            return
+
+        system_prompt = (
+            "You are EconoAnalyst, a helpful assistant for Business and Economics students. "
+            "Your scope is Malaysia labour market analysis: unemployment rate, employment, labour force, "
+            "labour force participation rate, economic interpretation, assignment/FYP writing support, "
+            "dashboard usage, and computer vision dashboard readability checking. "
+            "Stay within this topic. If the user asks outside this scope, politely redirect them back to Malaysia labour market analysis. "
+            "Do not invent exact latest statistics. If exact figures or charts are needed, tell the user to generate the dashboard. "
+            "Telegram formatting rules: use plain text only. Do not use Markdown, bold formatting, headings, tables, or long paragraphs. "
+            "Keep replies short, friendly, and student-friendly. Use at most 4 short bullet points. "
+            "For greetings, reply in 1-2 lines only."
+        )
+
+        try:
+            thinking_msg = await update.message.reply_text("Thinking... ⏳")
+
+            await context.bot.send_chat_action(
+                chat_id=update.effective_chat.id,
+                action=ChatAction.TYPING
+            )
+
+            response = await asyncio.to_thread(
+                requests.post,
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {openrouter_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "EconoAnalyst Demo"
+                },
+                json={
+                    "model": openrouter_model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_text}
+                    ],
+                    "temperature": 0.4,
+                    "max_tokens": 300
+                },
+                timeout=90
+            )
+
+            if response.status_code != 200:
+                await thinking_msg.edit_text(
+                    "OpenRouter LLM request failed ❌\n\n"
+                    f"Status: {response.status_code}\n"
+                    f"Error: {response.text[:500]}"
+                )
+                return
+
+            data = response.json()
+            choice = (data.get("choices") or [{}])[0]
+            message = choice.get("message") or {}
+            content = message.get("content")
+
+            if isinstance(content, list):
+                content = " ".join(
+                    part.get("text", "") if isinstance(part, dict) else str(part)
+                    for part in content
+                )
+
+            if not content:
+                content = message.get("reasoning") or message.get("refusal")
+
+            if not content:
+                content = (
+                    "I can help with Malaysia labour market analysis.\n"
+                    "Try asking about unemployment, employment, labour force participation, or dashboard generation."
+                )
+
+            answer = str(content).strip()
+
+            # Clean Markdown-like formatting because Telegram reply_text is plain text
+            answer = answer.replace("**", "").replace("__", "")
+            answer = answer.replace("###", "").replace("##", "").replace("#", "")
+            answer = answer.replace("•", "-")
+            answer = "\n".join(line.rstrip() for line in answer.splitlines()).strip()
+
+            if not answer:
+                answer = (
+                    "I can help with Malaysia labour market analysis.\n"
+                    "Try asking about unemployment, employment, labour force participation, or dashboard generation."
+                )
+
+            if len(answer) > 3500:
+                answer = answer[:3500] + "\n\n..."
+
+            await thinking_msg.edit_text(answer)
+            return
+
+        except Exception as e:
+            await update.message.reply_text(
+                "I could not generate an LLM answer right now ❌\n\n"
+                f"Error: {e}\n\n"
+                "You can still type:\n"
+                "Generate Malaysia labour market dashboard"
+            )
+            return
+
+    # Dashboard generation flow
+    load_dotenv(dotenv_path=Path.cwd() / ".env")
+    backend_url = os.getenv("BACKEND_URL")
+
+    if not backend_url:
+        await update.message.reply_text(
+            "Backend URL is missing. Please check your .env file."
+        )
+        return
+
+    internal_md = Path("examples/sample_instruction.md")
+
+    if not internal_md.exists():
+        await update.message.reply_text(
+            "Internal instruction file not found: examples/sample_instruction.md"
+        )
+        return
+
+    payload = {
+        "user_id": user_id,
+        "task": user_text,
+        "markdown_path": str(internal_md.resolve())
+    }
+
+    try:
+        await update.message.reply_text(
+            "Task received ✅\n\n"
+            f"📌 Your task:\n{user_text}\n\n"
+            "Using the internal EconoAnalyst instruction template.\n"
+            "Generating research summary, dashboard, and visual quality check... 📊"
+        )
+
+        response = requests.post(
+            f"{backend_url}/process-task",
+            json=payload,
+            timeout=600
+        )
+
+        backend_reply = response.json()
+
+        backend_message = backend_reply.get("message", "")
+        dashboard_path = backend_reply.get("dashboard_path")
+        screenshot_path = backend_reply.get("screenshot_path")
+
+        summary = build_student_summary(
+            task=user_text,
+            backend_message=backend_message,
+            dashboard_path=dashboard_path,
+            backend_reply=backend_reply
+        )
+
+        await update.message.reply_text(summary)
+
+        if dashboard_path:
+            with open(dashboard_path, "rb") as dashboard_file:
+                await update.message.reply_document(
+                    document=dashboard_file,
+                    filename="EcoResearch_Dashboard.html",
+                    caption="Interactive dashboard generated successfully 💻✅"
+                )
+
+            if screenshot_path:
+                with open(screenshot_path, "rb") as screenshot_file:
+                    await update.message.reply_photo(
+                        photo=screenshot_file,
+                        caption="Dashboard preview image generated for visual quality checking."
+                    )
+        else:
+            await update.message.reply_text(
+                "The analysis finished, but no dashboard file was found."
+            )
+
+    except Exception as e:
+        await update.message.reply_text(
+            "The backend connection failed ❌\n\n"
+            f"Error: {e}"
+        )
 
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
