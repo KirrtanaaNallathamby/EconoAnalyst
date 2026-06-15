@@ -31,23 +31,29 @@ def extract_value(pattern: str, text: str, default: str) -> str:
     return default
 
 
-def build_student_summary(task: str, backend_message: str, dashboard_path: str | None) -> str:
+def build_student_summary(
+    task: str,
+    backend_message: str,
+    dashboard_path: str | None,
+    backend_reply: dict | None = None
+) -> str:
+    backend_reply = backend_reply or {}
     dataset = extract_value(
         r"Dataset:\s*(.+)",
         backend_message,
-        "Monthly Principal Labour Force Statistics"
+        backend_reply.get("dataset_title") or "Monthly Principal Labour Force Statistics"
     )
 
     dataset_id = extract_value(
         r"Dataset ID:\s*`?([^`\n]+)`?",
         backend_message,
-        "lfs_month"
+        backend_reply.get("dataset_id") or "lfs_month"
     )
 
     rows = extract_value(
         r"Rows analysed:\s*`?([^`\n]+)`?",
         backend_message,
-        "195"
+        str(backend_reply.get("row_count") or "196")
     )
 
     data_as_of = extract_value(
@@ -73,6 +79,30 @@ def build_student_summary(task: str, backend_message: str, dashboard_path: str |
 
     if dashboard_path:
         summary += f"\n\nSaved locally at:\n{dashboard_path}"
+
+    image_quality_report = backend_reply.get("image_quality_report")
+    screenshot_path = backend_reply.get("screenshot_path")
+
+    if image_quality_report:
+        summary += "\n\nDashboard Image Quality Check:\n"
+        if screenshot_path:
+            summary += f"Screenshot Preview:\n{screenshot_path}\n\n"
+
+        if image_quality_report.get("success"):
+            summary += (
+                f"Image Size: {image_quality_report.get('image_width')} x "
+                f"{image_quality_report.get('image_height')}\n"
+                f"Contrast: {image_quality_report.get('contrast')}\n"
+                f"Visual Content Ratio: {image_quality_report.get('visual_content_ratio')}\n"
+                f"Active Layout Regions: "
+                f"{image_quality_report.get('active_layout_regions')}/"
+                f"{image_quality_report.get('total_layout_regions')}\n"
+                f"Layout Status: {image_quality_report.get('layout_status')}"
+            )
+        else:
+            summary += f"Check not completed: {image_quality_report.get('error')}"
+            if image_quality_report.get("setup_hint"):
+                summary += f"\nSetup Hint: {image_quality_report.get('setup_hint')}"
 
     return summary
 
@@ -160,11 +190,13 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         backend_message = backend_reply.get("message", "")
         dashboard_path = backend_reply.get("dashboard_path")
+        screenshot_path = backend_reply.get("screenshot_path")
 
         summary = build_student_summary(
             task=latest_task,
             backend_message=backend_message,
-            dashboard_path=dashboard_path
+            dashboard_path=dashboard_path,
+            backend_reply=backend_reply
         )
 
         await update.message.reply_text(summary)
@@ -176,6 +208,12 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     filename="EcoResearch_Dashboard.html",
                     caption="Interactive dashboard generated successfully 🖥️✅"
                 )
+            if screenshot_path:
+                with open(screenshot_path, "rb") as screenshot_file:
+                    await update.message.reply_photo(
+                        photo=screenshot_file,
+                        caption="Dashboard preview image generated for visual quality checking."
+                    )
         else:
             await update.message.reply_text(
                 "The analysis finished, but no dashboard file was found."
