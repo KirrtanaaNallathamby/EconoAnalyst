@@ -13,6 +13,8 @@ venv\Scripts\activate
 3. Install Python dependencies
 
 pip install -r requirements.txt
+and run
+python -m playwright install chromium
 
 4. Create .env file
 
