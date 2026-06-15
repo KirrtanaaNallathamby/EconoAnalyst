@@ -181,7 +181,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         response = requests.post(
-            f"{backend_url}/openclaw-research",
+            f"{backend_url}/process-task",
             json=payload,
             timeout=600
         )
