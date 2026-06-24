@@ -60,6 +60,30 @@ def build_user_summary(
     if dashboard_path:
         summary += f"\n\nSaved path:\n{dashboard_path}"
 
+    screenshot_path = dashboard_result.get("screenshot_path")
+    image_quality_report = dashboard_result.get("image_quality_report")
+
+    if image_quality_report:
+        summary += "\n\nDashboard image quality check:\n"
+
+        if screenshot_path:
+            summary += f"- Screenshot preview: {screenshot_path}\n"
+
+        if image_quality_report.get("success"):
+            summary += (
+                f"- Image size: {image_quality_report.get('image_width')} x {image_quality_report.get('image_height')}\n"
+                f"- Contrast: {image_quality_report.get('contrast')}\n"
+                f"- Visual content ratio: {image_quality_report.get('visual_content_ratio')}\n"
+                f"- Active layout regions: "
+                f"{image_quality_report.get('active_layout_regions')}/"
+                f"{image_quality_report.get('total_layout_regions')}\n"
+                f"- Layout status: {image_quality_report.get('layout_status')}\n"
+            )
+        else:
+            summary += f"- Check not completed: {image_quality_report.get('error')}\n"
+            if image_quality_report.get("setup_hint"):
+                summary += f"- Setup hint: {image_quality_report.get('setup_hint')}\n"
+
     return summary
 
 
@@ -82,6 +106,10 @@ def build_developer_log(
             "\n\nDashboard generated successfully 🖥️✅\n"
             f"Dashboard path: {dashboard_result.get('dashboard_path')}"
         )
+        if dashboard_result.get("screenshot_path"):
+            log += f"\nScreenshot path: {dashboard_result.get('screenshot_path')}"
+        if dashboard_result.get("image_quality_report"):
+            log += f"\nImage quality report: {dashboard_result.get('image_quality_report')}"
     else:
         log += (
             "\n\nDashboard generation failed ❌\n"

@@ -11,3 +11,5 @@ lxml
 pandas
 pyarrow
 plotly
+pillow
+playwright
