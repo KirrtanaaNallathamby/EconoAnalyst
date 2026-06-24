@@ -150,7 +150,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     lower_text = user_text.lower()
 
-    # Help / menu
     if lower_text in [
         "help", "/help",
         "what can you do", "what can you do?",
@@ -158,35 +157,23 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "what can i ask", "what can i ask?",
         "menu", "start", "/start"
     ]:
-        await update.message.reply_text(
-            "Hi, I am EconoAnalyst 📊\n\n"
-            "I help Economics students understand Malaysia labour market data.\n\n"
-            "You can ask me questions such as:\n"
-            "• Why is unemployment rate important?\n"
-            "• What is labour force participation rate?\n"
-            "• How can unemployment trend be used in an economics assignment?\n"
-            "• Compare employment and unemployment.\n\n"
-            "When you want the full dashboard, type:\n"
-            "Generate Malaysia labour market dashboard"
-        )
+        await help_command(update, context)
         return
 
-    # Only generate dashboard when user clearly asks for visual/report output
     should_generate = any(word in lower_text for word in [
         "generate", "dashboard", "report", "visualise", "visualize", "chart", "html"
     ])
 
-    # Normal topic Q&A using OpenRouter free LLM
     if not should_generate:
         load_dotenv(dotenv_path=Path.cwd() / ".env")
 
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        openrouter_model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
+        openrouter_model = os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3-ultra-550b-a55b:free")
 
         if not openrouter_key:
             await update.message.reply_text(
-                "OpenRouter is not configured yet. Please set OPENROUTER_API_KEY in .env.\n\n"
-                "For dashboard demo, type:\n"
+                "OpenRouter is not configured yet.\n\n"
+                "You can still generate the dashboard by typing:\n"
                 "Generate Malaysia labour market dashboard"
             )
             return
@@ -198,9 +185,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "dashboard usage, and computer vision dashboard readability checking. "
             "Stay within this topic. If the user asks outside this scope, politely redirect them back to Malaysia labour market analysis. "
             "Do not invent exact latest statistics. If exact figures or charts are needed, tell the user to generate the dashboard. "
-            "Telegram formatting rules: use plain text only. Do not use Markdown, bold formatting, headings, tables, or long paragraphs. "
-            "Keep replies short, friendly, and student-friendly. Use at most 4 short bullet points. "
-            "For greetings, reply in 1-2 lines only."
+            "Use plain text only. Do not use Markdown, bold formatting, headings, or tables. "
+            "For normal economics questions, do not introduce yourself. Start directly with the answer. "
+            "Keep replies short, friendly, and student-friendly. Use at most 4 short bullet points."
         )
 
         try:
@@ -229,15 +216,23 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "temperature": 0.4,
                     "max_tokens": 300
                 },
-                timeout=90
+                timeout=45
             )
 
             if response.status_code != 200:
-                await thinking_msg.edit_text(
-                    "OpenRouter LLM request failed ❌\n\n"
-                    f"Status: {response.status_code}\n"
-                    f"Error: {response.text[:500]}"
-                )
+                if response.status_code == 429:
+                    await thinking_msg.edit_text(
+                        "Free LLM quota reached for today ⚠️\n\n"
+                        "You can still generate the dashboard by typing:\n"
+                        "Generate Malaysia labour market dashboard\n\n"
+                        "Please try LLM questions again after the free quota resets."
+                    )
+                else:
+                    await thinking_msg.edit_text(
+                        "The LLM service is temporarily unavailable ⚠️\n\n"
+                        "You can still generate the dashboard by typing:\n"
+                        "Generate Malaysia labour market dashboard"
+                    )
                 return
 
             data = response.json()
@@ -261,18 +256,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
 
             answer = str(content).strip()
-
-            # Clean Markdown-like formatting because Telegram reply_text is plain text
             answer = answer.replace("**", "").replace("__", "")
             answer = answer.replace("###", "").replace("##", "").replace("#", "")
             answer = answer.replace("•", "-")
+            answer = answer.replace("Hello! I am EconoAnalyst.", "")
+            answer = answer.replace("Hi, I am EconoAnalyst.", "")
             answer = "\n".join(line.rstrip() for line in answer.splitlines()).strip()
-
-            if not answer:
-                answer = (
-                    "I can help with Malaysia labour market analysis.\n"
-                    "Try asking about unemployment, employment, labour force participation, or dashboard generation."
-                )
 
             if len(answer) > 3500:
                 answer = answer[:3500] + "\n\n..."
@@ -289,14 +278,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-    # Dashboard generation flow
     load_dotenv(dotenv_path=Path.cwd() / ".env")
     backend_url = os.getenv("BACKEND_URL")
 
     if not backend_url:
-        await update.message.reply_text(
-            "Backend URL is missing. Please check your .env file."
-        )
+        await update.message.reply_text("Backend URL is missing. Please check your .env file.")
         return
 
     internal_md = Path("examples/sample_instruction.md")
@@ -345,6 +331,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if dashboard_path:
             with open(dashboard_path, "rb") as dashboard_file:
                 await update.message.reply_document(
+                    read_timeout=240,
+                    write_timeout=240,
+                    connect_timeout=60,
+                    pool_timeout=60,
                     document=dashboard_file,
                     filename="EcoResearch_Dashboard.html",
                     caption="Interactive dashboard generated successfully 💻✅"
@@ -353,19 +343,23 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if screenshot_path:
                 with open(screenshot_path, "rb") as screenshot_file:
                     await update.message.reply_photo(
+                        read_timeout=240,
+                        write_timeout=240,
+                        connect_timeout=60,
+                        pool_timeout=60,
                         photo=screenshot_file,
                         caption="Dashboard preview image generated for visual quality checking."
                     )
         else:
-            await update.message.reply_text(
-                "The analysis finished, but no dashboard file was found."
-            )
+            await update.message.reply_text("The analysis finished, but no dashboard file was found.")
 
     except Exception as e:
         await update.message.reply_text(
-            "The backend connection failed ❌\n\n"
+            "Telegram upload timed out ⚠️\n\n"
             f"Error: {e}"
         )
+
+
 
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -434,6 +428,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if dashboard_path:
             with open(dashboard_path, "rb") as dashboard_file:
                 await update.message.reply_document(
+                    read_timeout=240,
+                    write_timeout=240,
+                    connect_timeout=60,
+                    pool_timeout=60,
                     document=dashboard_file,
                     filename="EcoResearch_Dashboard.html",
                     caption="Interactive dashboard generated successfully 🖥️✅"
@@ -441,6 +439,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if screenshot_path:
                 with open(screenshot_path, "rb") as screenshot_file:
                     await update.message.reply_photo(
+                        read_timeout=240,
+                        write_timeout=240,
+                        connect_timeout=60,
+                        pool_timeout=60,
                         photo=screenshot_file,
                         caption="Dashboard preview image generated for visual quality checking."
                     )
